@@ -7,7 +7,8 @@ from telegram.ext import (
     MessageHandler, ContextTypes, filters, PreCheckoutQueryHandler
 )
 
-TOKEN = "8627197175:AAHQ7Ere-UdE1V8mSbgjWtSLMSSk7I8fL4o"
+import os
+TOKEN = os.getenv("BOT_TOKEN")
 
 # ---------- VIDEOS ----------
 VIDEOS = {
