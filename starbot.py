@@ -9,6 +9,8 @@ from telegram.ext import (
 
 import os
 TOKEN = os.getenv("BOT_TOKEN")
+PORT = int(os.getenv("PORT", "10000"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
 
 # ---------- VIDEOS ----------
 VIDEOS = {
@@ -137,5 +139,16 @@ app.add_handler(CallbackQueryHandler(button))
 app.add_handler(PreCheckoutQueryHandler(precheckout))
 app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, success))
 
-print("BOT RUNNING ✔")
-app.run_polling()
+if not TOKEN:
+    raise RuntimeError("BOT_TOKEN is not set")
+if not WEBHOOK_URL:
+    raise RuntimeError("WEBHOOK_URL/RENDER_EXTERNAL_URL is not set")
+
+print("BOT RUNNING ✔ (webhook)")
+app.run_webhook(
+    listen="0.0.0.0",
+    port=PORT,
+    url_path="telegram",
+    webhook_url=f"{WEBHOOK_URL.rstrip('/')}/telegram",
+)
+
