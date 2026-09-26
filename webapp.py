@@ -32,10 +32,12 @@ def _run_loop():
 _thread = threading.Thread(target=_run_loop, daemon=True)
 _thread.start()
 
-async def _initialize():
+async def _startup():
     await telegram_app.initialize()
+    await telegram_app.start()
 
-asyncio.run_coroutine_threadsafe(_initialize(), _loop).result(timeout=20)
+# Start PTB once when the WSGI worker imports this module.
+asyncio.run_coroutine_threadsafe(_startup(), _loop).result(timeout=20)
 
 application = Flask(__name__)
 
@@ -47,9 +49,8 @@ def home():
 def telegram_webhook():
     payload = request.get_json(force=True, silent=False)
     update = Update.de_json(payload, telegram_app.bot)
-    future = asyncio.run_coroutine_threadsafe(
-        telegram_app.process_update(update),
-        _loop
-    )
-    future.result(timeout=20)
-    return "OK"
+
+    # Hand the update to PTB's running update queue and return HTTP 200
+    # immediately so Telegram does not time out waiting for handlers.
+    _loop.call_soon_threadsafe(telegram_app.update_queue.put_nowait, update)
+    return "OK", 200
