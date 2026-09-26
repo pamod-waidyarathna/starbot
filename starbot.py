@@ -103,7 +103,7 @@ def build_application():
     if not TOKEN:
         raise RuntimeError("BOT_TOKEN is not set")
 
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).updater(None).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     app.add_handler(CallbackQueryHandler(button))
