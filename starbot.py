@@ -6,6 +6,7 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters, PreCheckoutQueryHandler
 )
+from telegram.error import TelegramError
 
 import os
 
@@ -70,12 +71,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💰 Buy - {video['price']}⭐",
             callback_data=f"buy_{data}"
         )]]
-        await context.bot.send_photo(
-            chat_id=query.message.chat.id,
-            photo=THUMBNAILS[data],
-            caption=f"🎬 {video['title']}\n💰 Price: {video['price']}⭐",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        try:
+            await context.bot.send_photo(
+                chat_id=query.message.chat.id,
+                photo=THUMBNAILS[data],
+                caption=f"🎬 {video['title']}\n💰 Price: {video['price']}⭐",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        except TelegramError as exc:
+            print("THUMBNAIL ERROR:", repr(exc))
+            await context.bot.send_message(
+                chat_id=query.message.chat.id,
+                text=f"🎬 {video['title']}\n💰 Price: {video['price']}⭐",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
     elif data.startswith("buy_"):
         vid = data.replace("buy_", "")
         await context.bot.send_invoice(
