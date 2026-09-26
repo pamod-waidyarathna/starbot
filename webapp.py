@@ -1,7 +1,7 @@
 import asyncio
 import os
 import sys
-import threading
+
 from flask import Flask, request
 from telegram import Update
 
@@ -21,36 +21,29 @@ if os.path.isfile(ENV_FILE):
 
 from starbot import build_application
 
-telegram_app = build_application()
-
-_loop = asyncio.new_event_loop()
-
-def _run_loop():
-    asyncio.set_event_loop(_loop)
-    _loop.run_forever()
-
-_thread = threading.Thread(target=_run_loop, daemon=True)
-_thread.start()
-
-async def _startup():
-    await telegram_app.initialize()
-    await telegram_app.start()
-
-# Start PTB once when the WSGI worker imports this module.
-asyncio.run_coroutine_threadsafe(_startup(), _loop).result(timeout=20)
-
 application = Flask(__name__)
+
+
+async def process_telegram_update(payload):
+    telegram_app = build_application()
+
+    # PythonAnywhere WSGI web apps do not support background threads.
+    # Process each Telegram update synchronously inside this request instead.
+    await telegram_app.initialize()
+    try:
+        update = Update.de_json(payload, telegram_app.bot)
+        await telegram_app.process_update(update)
+    finally:
+        await telegram_app.shutdown()
+
 
 @application.get("/")
 def home():
     return "StarBot server works!"
 
+
 @application.post("/telegram")
 def telegram_webhook():
     payload = request.get_json(force=True, silent=False)
-    update = Update.de_json(payload, telegram_app.bot)
-
-    # Hand the update to PTB's running update queue and return HTTP 200
-    # immediately so Telegram does not time out waiting for handlers.
-    _loop.call_soon_threadsafe(telegram_app.update_queue.put_nowait, update)
+    asyncio.run(process_telegram_update(payload))
     return "OK", 200
